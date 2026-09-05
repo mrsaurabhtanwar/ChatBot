@@ -1,0 +1,7 @@
+langgraph
+sqlalchemy
+python-dotenv
+langchain-groq
+fastapi
+uvicorn
+streamlit
