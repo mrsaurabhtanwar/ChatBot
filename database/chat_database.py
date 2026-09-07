@@ -1,14 +1,29 @@
 import os
-
-from sqlalchemy import create_engine, Column, String, Integer, DateTime
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from dotenv import load_dotenv
 from datetime import datetime
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, func
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
+
 load_dotenv()
 
-DB_URL = os.getenv("DB_URL")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_FILE = os.path.join(BASE_DIR, "chat_database.db")
+DEFAULT_DB_URL = f"sqlite:///{DEFAULT_DB_FILE.replace(os.sep, '/')}"
 
-engine = create_engine(DB_URL)
+raw_db_url = os.getenv("DB_URL")
+if not raw_db_url or "chat_database.db" in raw_db_url:
+    DB_URL = DEFAULT_DB_URL
+elif raw_db_url.startswith("sqlite:///") and not os.path.isabs(raw_db_url.replace("sqlite:///", "")):
+    rel_path = raw_db_url.replace("sqlite:///", "")
+    project_root = os.path.abspath(os.path.join(BASE_DIR, ".."))
+    abs_path = os.path.abspath(os.path.join(project_root, rel_path))
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    DB_URL = f"sqlite:///{abs_path.replace(os.sep, '/')}"
+else:
+    DB_URL = raw_db_url
+
+connect_args = {"check_same_thread": False} if DB_URL.startswith("sqlite") else {}
+engine = create_engine(DB_URL, connect_args=connect_args)
 sessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -51,5 +66,10 @@ def get_chat_history(db, thread_id: str):
     )
 
 def fetch_all_threads(db):
-    results = db.query(CHATTable.thread_id).distinct().all()
+    results = (
+        db.query(CHATTable.thread_id)
+        .group_by(CHATTable.thread_id)
+        .order_by(func.max(CHATTable.timestamp).desc())
+        .all()
+    )
     return [r[0] for r in results if r[0]]

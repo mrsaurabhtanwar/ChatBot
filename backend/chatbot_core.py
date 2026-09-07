@@ -1,15 +1,11 @@
+import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END, MessagesState
-from synaptic import ChatbotMemory
-
 load_dotenv()
 
-# Initialize Synaptic Memory Engine (persisted in database/synaptic_memory.db)
-memory = ChatbotMemory(db_path="database/synaptic_memory.db", use_neural_extractor=True)
-
 llm = ChatGroq(
-    model="qwen/qwen3.8-27b",
+    model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
     temperature=0.5
 )
 
